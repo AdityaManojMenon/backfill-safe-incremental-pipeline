@@ -46,7 +46,7 @@ def generate_billing_event(event_id : str ,customer_id : str, event_type : str, 
 
 
 def generate_billing_events(num_customers : int = 50, days_back: int = 30,
-                            event_probability: float = 0.3, base_amount : float = 100
+                            event_probability: float = 0.3
 ) -> pd.DataFrame:
     """
     Generate initial SaaS billing events (no late updates yet).
@@ -59,7 +59,7 @@ def generate_billing_events(num_customers : int = 50, days_back: int = 30,
     
 
     for day_offset in range(days_back):
-        event_date = start_date + timedelta(day_offset)
+        event_date = start_date + timedelta(days = day_offset)
         for customer in customers:
             if random.random() < event_probability: 
                 event = generate_billing_event(
