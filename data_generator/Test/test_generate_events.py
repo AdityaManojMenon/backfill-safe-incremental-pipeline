@@ -3,20 +3,22 @@ from data_generator.generate_events import generate_billing_events
 
 df = generate_billing_events()
 
-# Pick 3 random customers
-random_customers = (
-    df["customer_id"]
-    .drop_duplicates()
-    .sample(3, random_state=42)
-    .tolist()
+monthly_count = (
+    df[df["metadata"].apply(lambda x: x["billing_cycle"] == "monthly")]
+    .groupby("customer_id")
 )
 
-print("Selected customers:", random_customers)
+annual_count = (
+    df[df["metadata"].apply(lambda x: x["billing_cycle"] == "annually")]
+    .groupby("customer_id")
+    .size()
+)
 
-# Show full billing history for each
-for cust in random_customers:
-    print(f"\n===== Billing history for {cust} =====")
-    print(
-        df[df["customer_id"] == cust]
-        .sort_values("event_ts")
-    )
+print("Monthly invoices per customer:")
+print(monthly_count.describe())
+
+print("\nAnnual invoices per customer:")
+print(annual_count.describe())
+
+print("\nTotal events:", len(df))
+
