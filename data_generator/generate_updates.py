@@ -51,13 +51,60 @@ def generate_updates(df: pd.DataFrame) -> pd.DataFrame:
     #Refund
     updated_df.loc[refund_mask, "event_type"] = "invoice_refunded"
     updated_df.loc[refund_mask, "amount"] = -updated_df.loc[refund_mask, "amount"].abs()
-    updated_df.loc[refund_mask, "metadata"] = updated_df.loc[refund_mask, "metadata"].apply(
-    lambda m: {**m, "adjustment_reason": "cancellation"}
+    updated_df.loc[refund_mask, "metadata"] = updated_df.loc[refund_mask].apply(
+    lambda r: {
+        **r["metadata"], 
+        "adjustment_reason": "cancellation",
+        "canceled_at": r["updated_at"].isoformat()
+    },
+    axis = 1
 )
 
     #Proration
-    direction = np.random.choice(["Upgrade","Downgrade"], size = proration_mask.sum())
+    directions = np.random.choice(["Upgrade","Downgrade"], size = proration_mask.sum())
+    proration_factors = np.random.choice([0.25, 0.5, 0.75], size=proration_mask.sum())
+    # Extract current plans
+    # Extract current plans
+    current_plans = updated_df.loc[proration_mask, "metadata"].apply(lambda m: m["plan"]).values
 
+    new_plans = []
+    for plan, direction in zip(current_plans, directions):
+        if direction == "upgrade":
+            new_plans.append(
+                "premium" if plan == "pro"
+                else "pro" if plan == "basic"
+                else "premium"
+            )
+        else:
+            new_plans.append(
+                "basic" if plan == "pro"
+                else "pro" if plan == "premium"
+                else "basic"
+            )
+
+    # Compute price deltas
+    old_prices = np.array([PLAN_PRICES[p] for p in current_plans])
+    new_prices = np.array([PLAN_PRICES[p] for p in new_plans])
+
+    price_deltas = (new_prices - old_prices) * proration_factors
+
+    # Apply adjustment
+    updated_df.loc[proration_mask, "event_type"] = "invoice_adjusted"
+    updated_df.loc[proration_mask, "amount"] = old_prices + price_deltas
+
+    updated_df.loc[proration_mask, "metadata"] = updated_df.loc[proration_mask, "metadata"].apply(
+        lambda m: {
+            **m,
+            "adjustment_reason": "proration",
+            "change_direction": "upgrade" if m["plan"] != "premium" else "downgrade",
+            "old_plan": m["plan"],
+            "new_plan": (
+                "premium" if m["plan"] == "pro"
+                else "pro" if m["plan"] == "basic"
+                else "basic"
+            )
+        }
+    )
     
     return updated_df
 
