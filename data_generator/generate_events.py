@@ -14,6 +14,8 @@ BILLING_CYCLE = ["monthly","annually"]
 
 REGIONS = ["us-east","us-west","us-central"]
 
+ANNUAL_MULTIPLIER = 11 #Discounted for annual users like in most SaaS platforms like Uber,Spotify,etc. 
+
 def generate_customers(n: int) -> list[dict]:
     """Generate customer IDs"""""
     # Customers structure: [{customer_id : customer_0001, plan : pro, billing_cycle : monthly, regions : us-west}]
@@ -44,7 +46,7 @@ def generate_billing_event(event_id : str ,customer_id : str, event_type : str, 
     }
 
 def generate_billing_events(num_customers : int = 400, 
-                            months_back: int = 36) -> pd.DataFrame:
+                            months_back: int = 36,cancellations: Optional[Dict[str, datetime]] = None) -> pd.DataFrame:
     """
     Generate initial SaaS billing events (no late updates yet).
     """
@@ -54,26 +56,37 @@ def generate_billing_events(num_customers : int = 400,
     events = [] # Container for all billing events before dataframe conversion
     random.seed(42) # Deterministic Randomness 
 
+    cancellations = cancellations or {}
+
     for month_offset in range(months_back):
         # Move backwards month-by-month
         event_month = start_month - pd.DateOffset(months = month_offset)
         event_date = event_month.to_pydatetime()
 
         for customer in customers:
+            customer_id = customer["customer_id"]
+            #stop billing after cancellation
+            canceled_at = cancellations.get(customer_id)
+            if canceled_at and event_date >= canceled_at:
+                continue
+
             billing_cycle = customer["billing_cycle"]
             #Monthly invoices should be billed every month 
             if billing_cycle == "monthly":
                 should_bill = True
+                val = SUBSCRIPTION_PLANS[customer["plan"]]
             else:
                 #Annual billing: once per year, same month as start_month
                 should_bill = (event_date.month == start_month.month)
+                val = SUBSCRIPTION_PLANS[customer["plan"]]*ANNUAL_MULTIPLIER
+            
 
             if should_bill: 
                 event = generate_billing_event(
                     event_id = str(uuid.uuid4()), 
                     customer_id =  customer["customer_id"],
                     event_type = "invoice_paid",
-                    amount = SUBSCRIPTION_PLANS[customer["plan"]],
+                    amount = val,
                     event_ts = event_date,
                     updated_at= event_date,
                     metadata={
