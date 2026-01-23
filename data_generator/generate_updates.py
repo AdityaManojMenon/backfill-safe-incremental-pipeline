@@ -16,7 +16,7 @@ PLAN_PRICES = {
 NO_CHANGE_PCT = 0.75
 REFUND_PCT = 0.12
 PRORATION_PCT = 0.08
-DISCOUNT_PCT = 0.05
+DISCOUNT_PCTS = [0.10, 0.15, 0.20]
 MAX_UPDATE_LAG_MONTHS = 6  # updates can arrive up to 6 months later
 
 def generate_updates(df: pd.DataFrame) -> pd.DataFrame:
@@ -63,7 +63,7 @@ def generate_updates(df: pd.DataFrame) -> pd.DataFrame:
     #Proration
     directions = np.random.choice(["Upgrade","Downgrade"], size = proration_mask.sum())
     proration_factors = np.random.choice([0.25, 0.5, 0.75], size=proration_mask.sum())
-    # Extract current plans
+
     # Extract current plans
     current_plans = updated_df.loc[proration_mask, "metadata"].apply(lambda m: m["plan"]).values
 
@@ -105,6 +105,19 @@ def generate_updates(df: pd.DataFrame) -> pd.DataFrame:
             )
         }
     )
+
+    #Discount
+    discount_val = np.random.choice(DISCOUNT_PCTS,size = len(updated_df))
+    updated_df.loc[discount_mask, "event_type"] = "invoice_adjusted"
+    updated_df.loc[discount_mask, "amount"] = (updated_df.loc[discount_mask,  "amount"].values * (1 - discount_val))
+    updated_df.loc[discount_mask, "metadata"] = updated_df.loc[discount_mask, "metadata"].apply(
+    lambda m, pct=discount_val: {
+        **m,
+        "adjustment_reason": "discount",
+        "discount_pct": float(pct)
+    }
+)
+
     
     return updated_df
 
