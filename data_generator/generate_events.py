@@ -100,7 +100,7 @@ def generate_billing_events(num_customers : int = 400,
     df = df.sort_values("event_ts").reset_index(drop=True)
     return df
 
-df = generate_billing_events()
-
-print(f"\nTotal events generated: {len(df)}\n")
-print(df)
+if __name__ == "__main__":
+    df = generate_billing_events()
+    print(f"\nTotal events generated: {len(df)}\n")
+    print(df)

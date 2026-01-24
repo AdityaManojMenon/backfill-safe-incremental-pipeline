@@ -26,6 +26,7 @@ def generate_updates(df: pd.DataFrame) -> pd.DataFrame:
     |-- 75% (no change) -- 12% (refund) -- 8% (proration) -- 5% (discount) --|
     """
     random.seed(42)
+    np.random.seed(42)
     updated_df = df.copy()
     #Vectorize random generation (fast) and deterministic because of the random.seed(42)
     rolls = np.random.random(len(updated_df))
@@ -92,31 +93,37 @@ def generate_updates(df: pd.DataFrame) -> pd.DataFrame:
     updated_df.loc[proration_mask, "event_type"] = "invoice_adjusted"
     updated_df.loc[proration_mask, "amount"] = old_prices + price_deltas
 
-    updated_df.loc[proration_mask, "metadata"] = updated_df.loc[proration_mask, "metadata"].apply(
-        lambda m: {
-            **m,
-            "adjustment_reason": "proration",
-            "change_direction": "upgrade" if m["plan"] != "premium" else "downgrade",
-            "old_plan": m["plan"],
-            "new_plan": (
-                "premium" if m["plan"] == "pro"
-                else "pro" if m["plan"] == "basic"
-                else "basic"
-            )
-        }
+    updated_df.loc[proration_mask, "metadata"] = [
+    {
+        **m,
+        "adjustment_reason": "proration",
+        "change_direction": d,
+        "old_plan": m["plan"],
+        "new_plan": np
+    }
+    for m, d, np in zip(
+        updated_df.loc[proration_mask, "metadata"],
+        directions,
+        new_plans
     )
+]
 
     #Discount
-    discount_val = np.random.choice(DISCOUNT_PCTS,size = len(updated_df))
+    discount_val = np.random.choice(DISCOUNT_PCTS,size = discount_mask.sum())
     updated_df.loc[discount_mask, "event_type"] = "invoice_adjusted"
     updated_df.loc[discount_mask, "amount"] = (updated_df.loc[discount_mask,  "amount"].values * (1 - discount_val))
-    updated_df.loc[discount_mask, "metadata"] = updated_df.loc[discount_mask, "metadata"].apply(
-    lambda m, pct=discount_val: {
+    updated_df.loc[discount_mask, "metadata"] = [
+    {
         **m,
         "adjustment_reason": "discount",
         "discount_pct": float(pct)
     }
-)
+    for m, pct in zip(
+        updated_df.loc[discount_mask, "metadata"],
+        discount_val
+    )
+]
+
 
     
     return updated_df
