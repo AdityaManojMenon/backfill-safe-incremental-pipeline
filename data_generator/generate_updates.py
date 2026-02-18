@@ -1,9 +1,6 @@
-import uuid
 import random 
 import numpy as np
 import pandas as pd
-from typing import Dict, Optional
-from datetime import datetime, timedelta
 
 #Already defined in generate events file
 PLAN_PRICES = {
@@ -123,8 +120,6 @@ def generate_updates(df: pd.DataFrame) -> pd.DataFrame:
         discount_val
     )
 ]
-
-
     
     return updated_df
 
