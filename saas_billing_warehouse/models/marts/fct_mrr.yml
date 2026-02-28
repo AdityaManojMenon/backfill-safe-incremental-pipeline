@@ -1,0 +1,14 @@
+version: 2
+
+models:
+  - name: fct_mrr
+    columns:
+      - name: billing_month
+        tests:
+          - not_null
+      - name: customer_id
+        tests:
+          - not_null
+      - name: customer_mrr
+        tests:
+          - not_null

@@ -1,0 +1,14 @@
+version: 2
+
+sources:
+  - name: analytics
+    database: backfill-safe-data-pipeline
+    schema: analytics
+    tables:
+      - name: raw_billing_events
+        description: "Raw billing events ingested from event generator"
+
+        columns:
+          - name: event_id
+            tests:
+              - not_null

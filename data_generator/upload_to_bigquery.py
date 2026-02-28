@@ -3,6 +3,7 @@ from typing import Optional
 import pandas as pd
 from google.cloud import bigquery
 import uuid
+import json
 
 PROJECT_ID = "backfill-safe-data-pipeline"
 DATASET = "analytics"
@@ -32,14 +33,20 @@ def upload_to_raw(df: pd.DataFrame,batch_id: Optional[str] = None) -> str:
     
     client = bigquery.Client(project=PROJECT_ID)
 
-    # Add raw layer metadata
-    df = df.copy()
-    df["batch_id"] = batch_id
-    df["ingestion_ts"] = datetime.now(timezone.utc)
+    df_to_upload = df.copy()
+
+    # Convert metadata dict → JSON string
+    if "metadata" in df_to_upload.columns:
+        df_to_upload["metadata"] = df_to_upload["metadata"].apply(
+            lambda x: json.dumps(x) if isinstance(x, dict) else x
+        )
+    
+    df_to_upload["batch_id"] = batch_id
+    df_to_upload["ingestion_ts"] = datetime.now(timezone.utc)
     
     # Append to raw (idempotent if batch_id is deterministic)
     job_config = bigquery.LoadJobConfig(write_disposition="WRITE_APPEND")
-    job = client.load_table_from_dataframe(df, RAW_TABLE, job_config=job_config)
+    job = client.load_table_from_dataframe(df_to_upload, RAW_TABLE, job_config=job_config)
     job.result()
     
     print(f"Raw: Loaded {len(df)} events (batch_id={batch_id})")

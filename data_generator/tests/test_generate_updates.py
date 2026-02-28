@@ -1,4 +1,5 @@
 import pandas as pd
+import pytest
 from data_generator.generate_events import generate_billing_events
 from data_generator.generate_updates import generate_updates
 
