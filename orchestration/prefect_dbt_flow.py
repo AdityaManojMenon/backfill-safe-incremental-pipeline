@@ -1,24 +1,48 @@
 from prefect import flow, task
 import subprocess
-import os
+from data_generator.generate_events import generate_billing_events
+from data_generator.generate_updates import generate_updates
+from data_generator.upload_to_bigquery import initial_load, incremental_load
 
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-DBT_DIR = os.path.join(PROJECT_ROOT, "saas_billing_warehouse")
 
-@task(retries=2, retry_delay_seconds=10)
-def run_command(cmd):
-    result = subprocess.run(cmd, shell=True)
-    if result.returncode != 0:
-        raise Exception(f"Failed command: {cmd}")
+@task
+def generate_base():
+    return generate_billing_events(
+        num_customers=50000,
+        months_back=24
+    )
 
-@flow(name="saas-billing-pipeline")
-def pipeline():
 
-    run_command("make ingest")
-    run_command("make dbt-run")
-    run_command("make dbt-test")
-    run_command("make dbt-snapshot")
-    run_command("make dbt-freshness")
+@task
+def generate_update_data(base_df):
+    return generate_updates(base_df)
+
+
+@task
+def load_initial(df):
+    return initial_load(df)
+
+
+@task
+def load_incremental(df):
+    return incremental_load(df)
+
+
+@task
+def run_dbt():
+    subprocess.run(["dbt", "build"], check=True)
+
+
+@flow(name="saas_billing_pipeline")
+def main_flow():
+    base = generate_base()
+    load_initial(base)
+
+    updates = generate_update_data(base)
+    load_incremental(updates)
+
+    run_dbt()
+
 
 if __name__ == "__main__":
-    pipeline()
+    main_flow()

@@ -58,7 +58,6 @@ def run_validation():
         print("\nMerge validation failed.")
 
 
-
 def run_large_generation():
 
     print("Generating base 1M+ billing events...")
@@ -85,5 +84,5 @@ def run_large_generation():
 
 
 if __name__ == "__main__":
-    #run_large_generation()
+    run_large_generation()
     run_validation()
