@@ -1,0 +1,22 @@
+version: 2
+
+models:
+  - name: fct_customer_mrr
+    columns:
+      - name: billing_month
+        tests: [not_null]
+      - name: customer_id
+        tests: [not_null]
+      - name: mrr
+        tests: [not_null]
+
+  - name: fct_mrr_bridge
+    columns:
+      - name: billing_month
+        tests: [not_null]
+      - name: customer_id
+        tests: [not_null]
+      - name: movement
+        tests:
+          - accepted_values:
+              values: ['new_or_reactivated','churn','expansion','contraction','no_change','other']
