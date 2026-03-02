@@ -26,19 +26,7 @@ This project simulates a SaaS billing system at scale (~800k+ events) and builds
 
 ## Architecture
 
-Data Generator
-↓
-RAW (Append-only, partitioned by ingestion_ts)
-↓
-BRONZE (MERGE-based deduplicated fact table)
-↓
-dbt Staging
-↓
-fct_customer_mrr (Incremental, partitioned)
-↓
-fct_mrr_bridge (Revenue movement classification)
-↓
-fct_mrr_kpis (Churn + Net Retention Metrics)
+Data Generator : Python (Creates events and updates (sythetic billing data)) -> RAW (Append-only, partitioned by ingestion_ts) -> BRONZE (MERGE-based deduplicated fact table) in upload_to_bigquery.py -> dbt Staging -> fct_customer_mrr (Incremental, partitioned) -> fct_mrr_bridge (Revenue movement classification) -> fct_mrr_kpis (Churn + Net Retention Metrics). Everything is orchestrated by prefect
 
 ---
 
